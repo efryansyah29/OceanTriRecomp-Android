@@ -88,7 +88,7 @@ cp "${SDL3_SO}" "${BUILD_DIR}/apk_root/lib/arm64-v8a/libSDL3.so"
 
 echo "=== 7. Adding Native Libraries to APK (Uncompressed for 16KB Page Alignment) ==="
 cd "${BUILD_DIR}/apk_root"
-jar -0 -uf "${BUILD_DIR}/base.apk" lib/arm64-v8a/libmain.so lib/arm64-v8a/libpng16.so lib/arm64-v8a/libSDL3.so
+jar --update --no-compress --file="${BUILD_DIR}/base.apk" lib/arm64-v8a/libmain.so lib/arm64-v8a/libpng16.so lib/arm64-v8a/libSDL3.so
 
 echo "=== 8. Aligning APK (16KB page alignment) ==="
 cd "${BUILD_DIR}"
