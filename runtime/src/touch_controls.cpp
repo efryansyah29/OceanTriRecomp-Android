@@ -10,6 +10,9 @@
 #include "net/lan_beacon.h"
 #include "recomp_mod_loader.h"
 #include "efb_host.h"
+#include "cheats.h"
+#include "launcher_cheats.h"
+#include "player_health.h"
 
 #include <SDL3/SDL.h>
 #include <GLES3/gl3.h>
@@ -135,6 +138,7 @@ public:
 
         LoadSettings();
         LoadLayoutConfig();
+        LoadCheats();
         NoteTouchActivity();
     }
 
@@ -169,6 +173,8 @@ public:
                 SDL_SetWindowRelativeMouseMode(win, false);
             }
         } else {
+            ApplyCheats();
+            SaveCheats();
             if (SDL_Window* win = aurora_get_window()) {
 #if !defined(__ANDROID__)
                 SDL_HideCursor();
@@ -1186,8 +1192,8 @@ private:
         }
 
         // Header Title & Subtitle (Larger readable fonts)
-        const char* titles_es[] = { "Gráficos", "Sistema", "Guardados", "Controles", "Online" };
-        const char* titles_en[] = { "Graphics", "System", "Saves", "Controls", "Online" };
+        const char* titles_es[] = { "Gráficos", "Sistema", "Guardados", "Controles", "Online", "Trucos" };
+        const char* titles_en[] = { "Graphics", "System", "Saves", "Controls", "Online", "Cheats" };
         const char* const* titles = (m_menuLang == 1) ? titles_en : titles_es;
 
         const char* subtitles_es[] = {
@@ -1195,14 +1201,16 @@ private:
             "Idioma del menú, juego y reinicio",
             "Gestor de partidas Dolphin / Wii NAND",
             "Visibilidad en pantalla, mando gamepad y macros",
-            "Multijugador local, ZeroTier y servidores comunitarios"
+            "Multijugador local, ZeroTier y servidores comunitarios",
+            "Modo Dios, resistencia infinita y modificadores del cazador"
         };
         const char* subtitles_en[] = {
             "Display, resolution and presentation",
             "Menu language, game language and restart",
             "Dolphin / Wii NAND save file manager",
             "On-screen controls, gamepad and macros",
-            "Multiplayer, ZeroTier and community servers"
+            "Multiplayer, ZeroTier and community servers",
+            "God Mode, infinite stamina and hunter modifiers"
         };
         const char* const* subtitles = (m_menuLang == 1) ? subtitles_en : subtitles_es;
         DrawText(padX + 24.0f, padY + 16.0f, titles[m_menuTab], 28.0f, COL_WHITE);
@@ -1229,9 +1237,9 @@ private:
 
         // Tab Navigation Bar
         float tabY = padY + 86.0f;
-        float tabW = (panW - 40.0f - 40.0f) / 5.0f;
+        float tabW = (panW - 40.0f - 50.0f) / 6.0f;
         float tabH = 44.0f;
-        for (int i = 0; i < 5; ++i) {
+        for (int i = 0; i < 6; ++i) {
             float tx = padX + 20.0f + float(i) * (tabW + 10.0f);
             bool active = (m_menuTab == i);
             DrawRoundedRect(tx, tabY, tabW, tabH, 8.0f,
@@ -1250,6 +1258,7 @@ private:
         else if (m_menuTab == 2) RenderTabSaves(padX + 20.0f, contentY, contentW);
         else if (m_menuTab == 3) RenderTabControls(padX + 20.0f, contentY, contentW);
         else if (m_menuTab == 4) RenderTabOnline(padX + 20.0f, contentY, contentW);
+        else if (m_menuTab == 5) RenderTabCheats(padX + 20.0f, contentY, contentW);
     }
 
     void RenderTabGraphics(float x, float y, float w) {
@@ -1790,6 +1799,90 @@ private:
         DrawText(x + 85.0f, bannerY + 12.0f, m_onlineStatusMsg.c_str(), 14.0f, COL_WHITE);
     }
 
+    void RenderTabCheats(float x, float y, float w) {
+        // Card 1: Vitality & Stamina
+        float c1H = 118.0f;
+        DrawRoundedRect(x, y, w, c1H, 12.0f, COL_PANEL_CARD, COL_PANEL_BORDER);
+        DrawText(x + 18.0f, y + 14.0f, Tr("Combate y Resistencia", "Combat & Survival"), 19.0f, COL_WHITE);
+        DrawText(x + 18.0f, y + 34.0f, Tr("Modificadores de vitalidad, aguante y oxígeno para el cazador.",
+                                         "Vitality, stamina and oxygen modifiers for the hunter."), 13.0f, COL_MUTED);
+
+        float chipW = (w - 36.0f - 20.0f) / 3.0f;
+        float chipH = 42.0f;
+        float chip1Y = y + 58.0f;
+
+        // Chip 1: God Mode
+        float ch1X = x + 18.0f;
+        DrawRoundedRect(ch1X, chip1Y, chipW, chipH, 8.0f,
+                        m_cheatGodMode ? COL_ACTIVE_CHIP : COL_INACTIVE_CHIP,
+                        m_cheatGodMode ? COL_CYAN : COL_CHIP_BORDER);
+        DrawText(ch1X + chipW * 0.5f, chip1Y + 12.0f,
+                 m_cheatGodMode ? Tr("Modo Dios: ACTIVADO", "God Mode: ON") : Tr("Modo Dios: DESACTIVADO", "God Mode: OFF"),
+                 13.5f, m_cheatGodMode ? COL_ACTIVE_TEXT : COL_WHITE, true);
+
+        // Chip 2: Infinite Stamina
+        float ch2X = ch1X + chipW + 10.0f;
+        DrawRoundedRect(ch2X, chip1Y, chipW, chipH, 8.0f,
+                        m_cheatInfStamina ? COL_ACTIVE_CHIP : COL_INACTIVE_CHIP,
+                        m_cheatInfStamina ? COL_CYAN : COL_CHIP_BORDER);
+        DrawText(ch2X + chipW * 0.5f, chip1Y + 12.0f,
+                 m_cheatInfStamina ? Tr("Aguante: INFINITO", "Stamina: INFINITE") : Tr("Aguante: NORMAL", "Stamina: NORMAL"),
+                 13.5f, m_cheatInfStamina ? COL_ACTIVE_TEXT : COL_WHITE, true);
+
+        // Chip 3: Infinite Oxygen
+        float ch3X = ch2X + chipW + 10.0f;
+        DrawRoundedRect(ch3X, chip1Y, chipW, chipH, 8.0f,
+                        m_cheatInfOxygen ? COL_ACTIVE_CHIP : COL_INACTIVE_CHIP,
+                        m_cheatInfOxygen ? COL_CYAN : COL_CHIP_BORDER);
+        DrawText(ch3X + chipW * 0.5f, chip1Y + 12.0f,
+                 m_cheatInfOxygen ? Tr("Oxígeno: INFINITO", "Oxygen: INFINITE") : Tr("Oxígeno: NORMAL", "Oxygen: NORMAL"),
+                 13.5f, m_cheatInfOxygen ? COL_ACTIVE_TEXT : COL_WHITE, true);
+
+        // Card 2: Weapons & Equipment Status
+        float c2Y = y + c1H + 12.0f;
+        float c2H = 118.0f;
+        DrawRoundedRect(x, c2Y, w, c2H, 12.0f, COL_PANEL_CARD, COL_PANEL_BORDER);
+        DrawText(x + 18.0f, c2Y + 14.0f, Tr("Armas y Estados Alterados", "Weapons & Status"), 19.0f, COL_WHITE);
+        DrawText(x + 18.0f, c2Y + 34.0f, Tr("Afilado máximo continuo, munición inagotable e inmunidad a veneno/barro.",
+                                            "Continuous max sharpness, unlimited ammo and poison/mud immunity."), 13.0f, COL_MUTED);
+
+        float chip2Y = c2Y + 58.0f;
+
+        // Chip 4: Max Sharpness
+        DrawRoundedRect(ch1X, chip2Y, chipW, chipH, 8.0f,
+                        m_cheatMaxSharpness ? COL_ACTIVE_CHIP : COL_INACTIVE_CHIP,
+                        m_cheatMaxSharpness ? COL_CYAN : COL_CHIP_BORDER);
+        DrawText(ch1X + chipW * 0.5f, chip2Y + 12.0f,
+                 m_cheatMaxSharpness ? Tr("Afilado: MÁXIMO", "Sharpness: MAX") : Tr("Afilado: NORMAL", "Sharpness: NORMAL"),
+                 13.5f, m_cheatMaxSharpness ? COL_ACTIVE_TEXT : COL_WHITE, true);
+
+        // Chip 5: Infinite Ammo
+        DrawRoundedRect(ch2X, chip2Y, chipW, chipH, 8.0f,
+                        m_cheatInfAmmo ? COL_ACTIVE_CHIP : COL_INACTIVE_CHIP,
+                        m_cheatInfAmmo ? COL_CYAN : COL_CHIP_BORDER);
+        DrawText(ch2X + chipW * 0.5f, chip2Y + 12.0f,
+                 m_cheatInfAmmo ? Tr("Munición: INFINITA", "Ammo: INFINITE") : Tr("Munición: NORMAL", "Ammo: NORMAL"),
+                 13.5f, m_cheatInfAmmo ? COL_ACTIVE_TEXT : COL_WHITE, true);
+
+        // Chip 6: Status Immunity
+        DrawRoundedRect(ch3X, chip2Y, chipW, chipH, 8.0f,
+                        m_cheatStatusImmunity ? COL_ACTIVE_CHIP : COL_INACTIVE_CHIP,
+                        m_cheatStatusImmunity ? COL_CYAN : COL_CHIP_BORDER);
+        DrawText(ch3X + chipW * 0.5f, chip2Y + 12.0f,
+                 m_cheatStatusImmunity ? Tr("Inmunidad: ACTIVA", "Immunity: ACTIVE") : Tr("Inmunidad: NORMAL", "Immunity: NORMAL"),
+                 13.5f, m_cheatStatusImmunity ? COL_ACTIVE_TEXT : COL_WHITE, true);
+
+        // Status Notice Banner
+        float c3Y = c2Y + c2H + 12.0f;
+        float c3H = 46.0f;
+        DrawRoundedRect(x, c3Y, w, c3H, 8.0f, { 0.02f, 0.08f, 0.12f, 0.90f }, COL_PANEL_BORDER);
+        DrawText(x + 18.0f, c3Y + 13.0f, Tr("Aviso:", "Notice:"), 14.0f, COL_CYAN);
+        DrawText(x + 75.0f, c3Y + 13.0f,
+                 Tr("Para juego individual (Aldea de Moga). Se desactivan solos al conectar online.",
+                    "For solo story (Moga Village). Automatically disabled when connecting online."),
+                 13.5f, COL_WHITE);
+    }
+
     // -------------------------------------------------------------
     // Menu & Edit Touch Handlers
     // -------------------------------------------------------------
@@ -1814,10 +1907,10 @@ private:
 
         // Tabs
         float tabY = padY + 86.0f;
-        float tabW = (panW - 40.0f - 40.0f) / 5.0f;
+        float tabW = (panW - 40.0f - 50.0f) / 6.0f;
         float tabH = 44.0f;
         if (py >= tabY && py <= tabY + tabH) {
-            for (int i = 0; i < 5; ++i) {
+            for (int i = 0; i < 6; ++i) {
                 float tx = padX + 20.0f + float(i) * (tabW + 10.0f);
                 if (px >= tx && px <= tx + tabW) {
                     m_menuTab = i;
@@ -2137,6 +2230,60 @@ private:
             }
         } else if (m_menuTab == 4) { // Online / Multijugador
             HandleTabOnlineTouch(px, py, x, contentY, contentW);
+        } else if (m_menuTab == 5) { // Trucos / Cheats
+            HandleTabCheatsTouch(px, py, x, contentY, contentW);
+        }
+    }
+
+    void HandleTabCheatsTouch(float px, float py, float x, float contentY, float contentW) {
+        float chipW = (contentW - 36.0f - 20.0f) / 3.0f;
+        float chipH = 42.0f;
+        float ch1X = x + 18.0f;
+        float ch2X = ch1X + chipW + 10.0f;
+        float ch3X = ch2X + chipW + 10.0f;
+
+        // Card 1: Vitality & Stamina
+        float chip1Y = contentY + 58.0f;
+        if (py >= chip1Y && py <= chip1Y + chipH) {
+            if (px >= ch1X && px <= ch1X + chipW) {
+                m_cheatGodMode = !m_cheatGodMode;
+                ApplyCheats();
+                SaveCheats();
+                return;
+            } else if (px >= ch2X && px <= ch2X + chipW) {
+                m_cheatInfStamina = !m_cheatInfStamina;
+                ApplyCheats();
+                SaveCheats();
+                return;
+            } else if (px >= ch3X && px <= ch3X + chipW) {
+                m_cheatInfOxygen = !m_cheatInfOxygen;
+                ApplyCheats();
+                SaveCheats();
+                return;
+            }
+        }
+
+        // Card 2: Weapons & Equipment Status
+        float c1H = 118.0f;
+        float c2Y = contentY + c1H + 12.0f;
+        float chip2Y = c2Y + 58.0f;
+        if (py >= chip2Y && py <= chip2Y + chipH) {
+            if (px >= ch1X && px <= ch1X + chipW) {
+                m_cheatMaxSharpness = !m_cheatMaxSharpness;
+                ApplyCheats();
+                SaveCheats();
+                return;
+            } else if (px >= ch2X && px <= ch2X + chipW) {
+                m_cheatInfAmmo = !m_cheatInfAmmo;
+                ApplyCheats();
+                SaveCheats();
+                return;
+            } else if (px >= ch3X && px <= ch3X + chipW) {
+                m_cheatStatusImmunity = !m_cheatStatusImmunity;
+                ApplyCheats();
+                SaveCheats();
+                return;
+            }
         }
     }
 
@@ -2153,6 +2300,7 @@ private:
                 m_onlineStatusMsg = (m_menuLang == 1)
                     ? "Official mh3sp.com community server enabled."
                     : "Servidor oficial de la comunidad mh3sp.com activado.";
+                ApplyCheats();
                 return;
             }
             if (px >= c1X && px <= c1X + mChipW) {
@@ -2161,6 +2309,7 @@ private:
                 m_onlineStatusMsg = (m_menuLang == 1)
                     ? "Offline mode. Play in Moga Village."
                     : "Modo desconectado. Juega en la Aldea de Moga.";
+                ApplyCheats();
                 return;
             }
         }
@@ -2455,6 +2604,72 @@ private:
         }
     }
 
+    void ApplyCheats() {
+        if (m_onlineMode != 0) {
+            PlayerHealth::SetNoDamage(false);
+            LauncherCheats::SetNoStaminaDrain(false);
+            LauncherCheats::Enable(size_t(Cheats::Id::NoDamage), false);
+            LauncherCheats::Enable(size_t(Cheats::Id::NoStaminaDrain), false);
+            LauncherCheats::Enable(size_t(Cheats::Id::InfiniteStamina), false);
+            LauncherCheats::Enable(size_t(Cheats::Id::InfiniteAir), false);
+            LauncherCheats::Enable(size_t(Cheats::Id::WeaponsSharp), false);
+            LauncherCheats::Enable(size_t(Cheats::Id::InfiniteAmmo), false);
+            LauncherCheats::Enable(size_t(Cheats::Id::NeverPoison), false);
+            LauncherCheats::Enable(size_t(Cheats::Id::NeverMuddy), false);
+            LauncherCheats::Enable(size_t(Cheats::Id::NeverSnowman), false);
+            return;
+        }
+
+        PlayerHealth::SetNoDamage(m_cheatGodMode);
+        LauncherCheats::Enable(size_t(Cheats::Id::NoDamage), m_cheatGodMode);
+
+        LauncherCheats::SetNoStaminaDrain(m_cheatInfStamina);
+        LauncherCheats::Enable(size_t(Cheats::Id::NoStaminaDrain), m_cheatInfStamina);
+        LauncherCheats::Enable(size_t(Cheats::Id::InfiniteStamina), m_cheatInfStamina);
+
+        LauncherCheats::Enable(size_t(Cheats::Id::InfiniteAir), m_cheatInfOxygen);
+        LauncherCheats::Enable(size_t(Cheats::Id::WeaponsSharp), m_cheatMaxSharpness);
+        LauncherCheats::Enable(size_t(Cheats::Id::InfiniteAmmo), m_cheatInfAmmo);
+
+        LauncherCheats::Enable(size_t(Cheats::Id::NeverPoison), m_cheatStatusImmunity);
+        LauncherCheats::Enable(size_t(Cheats::Id::NeverMuddy), m_cheatStatusImmunity);
+        LauncherCheats::Enable(size_t(Cheats::Id::NeverSnowman), m_cheatStatusImmunity);
+    }
+
+    void SaveCheats() {
+        const char* user = std::getenv("MH3_USER_DIR");
+        std::string dir = (user && *user) ? user : "/storage/emulated/0/MH3";
+        std::string cheatsPath = dir + "/MH3UI.cheats";
+
+        std::ofstream out(cheatsPath, std::ios::trunc);
+        if (out) {
+            out << (m_cheatGodMode ? 1 : 0) << ' '
+                << (m_cheatInfStamina ? 1 : 0) << ' '
+                << (m_cheatInfOxygen ? 1 : 0) << ' '
+                << (m_cheatMaxSharpness ? 1 : 0) << ' '
+                << (m_cheatInfAmmo ? 1 : 0) << ' '
+                << (m_cheatStatusImmunity ? 1 : 0) << '\n';
+        }
+    }
+
+    void LoadCheats() {
+        const char* user = std::getenv("MH3_USER_DIR");
+        std::string dir = (user && *user) ? user : "/storage/emulated/0/MH3";
+        std::string cheatsPath = dir + "/MH3UI.cheats";
+
+        std::ifstream in(cheatsPath);
+        int god = 0, stam = 0, air = 0, sharp = 0, ammo = 0, status = 0;
+        if (in >> god >> stam >> air >> sharp >> ammo >> status) {
+            m_cheatGodMode = (god != 0);
+            m_cheatInfStamina = (stam != 0);
+            m_cheatInfOxygen = (air != 0);
+            m_cheatMaxSharpness = (sharp != 0);
+            m_cheatInfAmmo = (ammo != 0);
+            m_cheatStatusImmunity = (status != 0);
+        }
+        ApplyCheats();
+    }
+
     void RestartApplication() {
         if (m_restarting) return;
         m_restarting = true;
@@ -2703,6 +2918,14 @@ private:
     int m_onlineMode = 3;
     std::string m_onlineHostIp = "mh3sp.com";
     std::string m_onlineStatusMsg = "Servidor oficial de la comunidad mh3sp.com activado.";
+
+    // Cheats State
+    bool m_cheatGodMode = false;
+    bool m_cheatInfStamina = false;
+    bool m_cheatInfOxygen = false;
+    bool m_cheatMaxSharpness = false;
+    bool m_cheatInfAmmo = false;
+    bool m_cheatStatusImmunity = false;
 
     // Macros & Edit Mode
     bool m_macro1Enabled = true;

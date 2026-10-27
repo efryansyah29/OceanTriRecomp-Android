@@ -560,12 +560,13 @@ void ConsumePresses() {
 }
 
 void Step(CpuContext*) {
-    static const bool any = [] {
-        for (size_t i = 0; i < size_t(Id::Count); ++i)
-            if (g_on[i] && Id(i) != Id::NoDamage && Id(i) != Id::NoStaminaDrain && Id(i) != Id::AllItems && Id(i) != Id::AllEquipment)
-                return true;
-        return false;
-    }();
+    bool any = false;
+    for (size_t i = 0; i < size_t(Id::Count); ++i) {
+        if (g_on[i] && Id(i) != Id::NoDamage && Id(i) != Id::NoStaminaDrain && Id(i) != Id::AllItems && Id(i) != Id::AllEquipment) {
+            any = true;
+            break;
+        }
+    }
 
     if (!any)
         return;

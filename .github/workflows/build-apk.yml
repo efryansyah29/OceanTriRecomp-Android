@@ -70,25 +70,33 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: OceanTriRecomp-Android-v1.5.5-test-arm64
-          path: release/OceanTriRecomp-Android-v1.5.5-test-arm64.apk
+          name: OceanTriRecomp-Android-v1.5.5-cheats-arm64
+          path: release/*.apk
           if-no-files-found: error
 
-      - name: Publish Pre-Release on GitHub
+      - name: Publish Release on GitHub
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main'
         with:
-          tag_name: v1.5.5-test
-          name: "OceanTriRecomp Android v1.5.5 Test (Telemetry Logger)"
+          tag_name: v1.5.5-cheats
+          name: "OceanTriRecomp Android v1.5.5 (Cheats Overlay Mod)"
           body: |
-            ## OceanTriRecomp Android v1.5.5-test 🦖📱
+            ## OceanTriRecomp Android v1.5.5 (Custom Cheats Mod) 🦖🎮📱
 
-            Esta versión de prueba incluye telemetría integrada para diagnosticar el fallo de físicas y teletransporte en el Bosque Inundado y el atajo del campamento en *"Sin amor por el ludroth"*.
+            Versi kustom Monster Hunter Tri Android ARM64 dengan integrasi menu overlay aktivasi cheat on/off langsung di layar sentuh serta kompatibilitas Gamepad (GameSir Nova Lite).
 
-            ### 📝 Registros generados
-            - Ubicación del log en el dispositivo: `/storage/emulated/0/MH3/logs/hunter_telemetry.log`
-            - Registro automático de anomalías `[TELEPORT DETECTED]` y `[WALKING ON WATER]`.
-          files: release/OceanTriRecomp-Android-v1.5.5-test-arm64.apk
-          prerelease: true
+            ### ✨ Fitur Baru yang Ditambahkan:
+            - **Tab Cheats Baru di Menu Pengaturan (⚙ Settings ➔ Cheats)**:
+              - 🛡️ **God Mode / No Damage**: Kebal dari semua serangan monster, lava, racun, dan damage lingkungan.
+              - ⚡ **Infinite Stamina**: Lari, roll/dodge, dan manuver tanpa pernah kehabisan stamina.
+              - 🤿 **Infinite Oxygen**: Oksigen bawah air terkunci di angka 100% (bebas berenang dan berburu di air).
+              - ⚔️ **Max Sharpness**: Ketajaman senjata melee selalu maksimal dan tidak pernah tumpul.
+              - 🏹 **Infinite Ammo**: Peluru bowgun tidak berkurang saat ditembakkan.
+              - 🧪 **Status Immunity**: Kebal dari racun, lumpur Barroth, dan salju.
+            - **🎮 Dukungan Penuh Gamepad**: Plug-and-play GameSir Nova Lite / Xbox / Nintendo Switch gamepad dengan analog Hall Effect.
+            - **🔒 Auto Safe-Guard**: Cheat otomatis nonaktif saat beralih ke server online Loc Lac.
+            - **💾 Persistence**: Status toggle switch disimpan otomatis di `/storage/emulated/0/MH3/MH3UI.cheats`.
+          files: release/*.apk
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
