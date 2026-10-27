@@ -12,17 +12,18 @@
 - [ ] Lakukan commit dan push ke remote repository `origin main` untuk memicu proses build di cloud GitHub Actions
 
 ## 🔄 Actions Done (Rolling Window 5–7 items)
-- 2026-10-27: Forked `Kiridor123/OceanTriRecomp-Android` to `efryansyah29/OceanTriRecomp-Android`.
-- 2026-10-27: Patched `runtime/src/cheats.cpp` to evaluate active cheats dynamically per-frame instead of static-once.
-- 2026-10-27: Extended `TouchSettingsEngine` with 6th navigation tab `Cheats`, bilingual EN/ES labels, and custom chip toggles.
 - 2026-10-27: Implemented `ApplyCheats()`, `SaveCheats()`, and `LoadCheats()` for zero-crash cheat persistence.
-- 2026-10-27: Updated `.github/workflows/build-apk.yml` to trigger automatic release tag `v1.5.5-cheats` on push.
+- 2026-10-27: Patched `runtime/src/cheats.cpp` to evaluate active cheats dynamically per-frame instead of static-once.
+- 2026-10-27: Successfully compiled and published initial release `v1.5.5-cheats` on GitHub Actions.
+- 2026-10-27: Root-caused instant cold-start crash: `super.onCreate()` called after dialog trigger, causing `WindowManager.BadTokenException`.
+- 2026-10-27: Patched `OceanTriActivity.java` lifecycle flow, safe dialog handlers, and deferred ROM verification to `onResume()`.
+- 2026-10-27: Updated GitHub Actions workflow for release tag `v1.5.5-cheats-r2`.
 
 ## ⚠️ Known Blockers & Edge Cases
-- Kompilasi APK menggunakan GitHub Actions Cloud Runner untuk menghemat storage dan menghindari ketergantungan toolchain NDK 28 lokal di laptop.
-- ROM yang didukung tetap Monster Hunter Tri PAL Game ID `RMHP08`.
+- Tanpa file ROM (`RMHP08`), game tidak memiliki asset grafis/audio untuk dijalankan.
+- ROM wajib Monster Hunter Tri PAL Game ID `RMHP08` (`.rvz` atau `.iso`).
 
 ## 🚀 Next Steps
-1. Commit semua berkas yang telah dimodifikasi dan push ke `origin main`.
-2. Monitor jalannya workflow GitHub Actions di repository `efryansyah29/OceanTriRecomp-Android`.
-3. Verifikasi hasil APK di halaman GitHub Releases.
+1. Push perbaikan cold-start crash ke `origin main` untuk memicu build APK v1.5.5-r2.
+2. Unduh file ROM Monster Hunter Tri PAL `RMHP08.rvz` ke HP di folder `/storage/emulated/0/MH3/`.
+3. Pasang APK baru dan jalankan game.

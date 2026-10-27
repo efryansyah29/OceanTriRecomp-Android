@@ -111,10 +111,9 @@ public class OceanTriActivity extends SDLActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // Call super.onCreate synchronously (required by Android) as first statement
+        super.onCreate(savedInstanceState);
         log("OceanTriActivity.onCreate() called");
-
-        // Request 120Hz high refresh rate display mode
-        setHighRefreshRate();
 
         // Crash handler to log Java crashes
         Thread.setDefaultUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
@@ -138,24 +137,20 @@ public class OceanTriActivity extends SDLActivity {
             }
         });
 
-        if (hasStoragePermission()) {
-            log("Storage permission granted at startup. Verifying ROM...");
-            checkRomAndPrepare();
-        } else {
-            log("Storage permissions not yet granted. Requesting...");
-            requestStoragePermission();
-        }
-
-        // Call super.onCreate synchronously (required by Android)
-        super.onCreate(savedInstanceState);
+        // Request high refresh rate display mode
+        setHighRefreshRate();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         setHighRefreshRate();
-        if (hasStoragePermission() && !mRomReady && !mRomCheckStarted) {
-            checkRomAndPrepare();
+        if (hasStoragePermission()) {
+            if (!mRomReady) {
+                checkRomAndPrepare();
+            }
+        } else {
+            requestStoragePermission();
         }
     }
 
@@ -265,25 +260,29 @@ public class OceanTriActivity extends SDLActivity {
     }
 
     private void showRomFoundPrompt(final String detectedPath) {
+        if (isFinishing() || (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1 && isDestroyed())) {
+            return;
+        }
         final File file = new File(detectedPath);
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Monster Hunter Tri");
-        builder.setMessage("Se detectó tu ROM en:\n" + detectedPath + "\n\n" +
-            "¿Deseas copiarla automáticamente a /storage/emulated/0/MH3/ para iniciar?");
-        builder.setPositiveButton("Copiar a MH3 e Iniciar", new DialogInterface.OnClickListener() {
+        builder.setMessage("Ditemukan file ROM di:\n" + detectedPath + "\n\n" +
+            "Apakah ingin menyalinnya ke /storage/emulated/0/MH3/ untuk memulai game?\n" +
+            "(ROM detected. Copy to /storage/emulated/0/MH3/ to start?)");
+        builder.setPositiveButton("Salin ke MH3 & Mulai", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 File target = new File("/storage/emulated/0/MH3", file.getName());
                 copyFileWithProgress(file, target);
             }
         });
-        builder.setNeutralButton("Seleccionar otra", new DialogInterface.OnClickListener() {
+        builder.setNeutralButton("Pilih ROM Lain", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 launchRomPicker();
             }
         });
-        builder.setNegativeButton("Usar sin copiar", new DialogInterface.OnClickListener() {
+        builder.setNegativeButton("Gunakan Langsung", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 sRomPath = detectedPath;
@@ -292,28 +291,40 @@ public class OceanTriActivity extends SDLActivity {
             }
         });
         builder.setCancelable(false);
-        builder.show();
+        try {
+            builder.show();
+        } catch (Exception e) {
+            log("Error displaying showRomFoundPrompt: " + e.getMessage());
+        }
     }
 
     private void showRomSelectPrompt() {
+        if (isFinishing() || (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1 && isDestroyed())) {
+            return;
+        }
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Monster Hunter Tri");
-        builder.setMessage("Por favor selecciona el archivo de la ROM (.iso, .rvz o .wia) de Monster Hunter Tri (Europeo).\n\n" +
-            "La aplicación se encargará de copiarla automáticamente a /storage/emulated/0/MH3/ para jugar.");
-        builder.setPositiveButton("Seleccionar ROM", new DialogInterface.OnClickListener() {
+        builder.setMessage("File ROM game (.iso / .rvz) belum ditemukan di HP.\n\n" +
+            "Silakan pilih file ROM Monster Hunter Tri (Europe/PAL - RMHP08), atau salin file ROM Anda ke folder /storage/emulated/0/MH3/.\n\n" +
+            "(Game ROM not found. Please select your RMHP08 .iso/.rvz file or put it in /storage/emulated/0/MH3/)");
+        builder.setPositiveButton("Pilih ROM (Select ROM)", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 launchRomPicker();
             }
         });
-        builder.setNegativeButton("Salir", new DialogInterface.OnClickListener() {
+        builder.setNegativeButton("Keluar (Exit)", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 finish();
             }
         });
         builder.setCancelable(false);
-        builder.show();
+        try {
+            builder.show();
+        } catch (Exception e) {
+            log("Error displaying showRomSelectPrompt: " + e.getMessage());
+        }
     }
 
     private void launchRomPicker() {

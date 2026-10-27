@@ -78,25 +78,30 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main'
         with:
-          tag_name: v1.5.5-cheats
-          name: "OceanTriRecomp Android v1.5.5 (Cheats Overlay Mod)"
+          tag_name: v1.5.5-cheats-r2
+          name: "OceanTriRecomp Android v1.5.5-r2 (Cheats Mod & Cold-Start Crash Fix)"
           body: |
-            ## OceanTriRecomp Android v1.5.5 (Custom Cheats Mod) 🦖🎮📱
+            ## OceanTriRecomp Android v1.5.5-r2 (Cheats Mod + Crash Fix) 🦖🎮📱
 
-            Versi kustom Monster Hunter Tri Android ARM64 dengan integrasi menu overlay aktivasi cheat on/off langsung di layar sentuh serta kompatibilitas Gamepad (GameSir Nova Lite).
+            Pembaruan kustom Monster Hunter Tri Android ARM64 dengan integrasi menu overlay aktivasi cheat on/off, kompatibilitas Gamepad (GameSir Nova Lite), serta **perbaikan fatal crash saat startup**.
 
-            ### ✨ Fitur Baru yang Ditambahkan:
-            - **Tab Cheats Baru di Menu Pengaturan (⚙ Settings ➔ Cheats)**:
-              - 🛡️ **God Mode / No Damage**: Kebal dari semua serangan monster, lava, racun, dan damage lingkungan.
-              - ⚡ **Infinite Stamina**: Lari, roll/dodge, dan manuver tanpa pernah kehabisan stamina.
-              - 🤿 **Infinite Oxygen**: Oksigen bawah air terkunci di angka 100% (bebas berenang dan berburu di air).
-              - ⚔️ **Max Sharpness**: Ketajaman senjata melee selalu maksimal dan tidak pernah tumpul.
-              - 🏹 **Infinite Ammo**: Peluru bowgun tidak berkurang saat ditembakkan.
-              - 🧪 **Status Immunity**: Kebal dari racun, lumpur Barroth, dan salju.
-            - **🎮 Dukungan Penuh Gamepad**: Plug-and-play GameSir Nova Lite / Xbox / Nintendo Switch gamepad dengan analog Hall Effect.
-            - **🔒 Auto Safe-Guard**: Cheat otomatis nonaktif saat beralih ke server online Loc Lac.
-            - **💾 Persistence**: Status toggle switch disimpan otomatis di `/storage/emulated/0/MH3/MH3UI.cheats`.
+            ### 🐛 Perbaikan Fatal Crash pada Rilis Ini:
+            - **Fixed Cold-Start WindowManager BadTokenException**: Memperbaiki urutan `super.onCreate()` dan menunda pemanggilan dialog seleksi ROM ke `onResume()` sehingga aplikasi tidak force close seketika saat baru dibuka ketika file ROM belum ada.
+            - **Safe Dialog Handlers**: Mencegah crash jika dialog muncul saat aplikasi belum terpasang ke window manager.
+            - **Bilingual Prompts**: Dialog informasi pemilihan ROM kini lebih jelas.
+
+            ### ✨ Fitur Cheat & Controller:
+            - **Tab Cheats di Menu Pengaturan (⚙ Settings ➔ Cheats)**:
+              - 🛡️ **God Mode / No Damage**: Kebal dari semua serangan monster, lava, dan racun.
+              - ⚡ **Infinite Stamina**: Lari dan roll tanpa batas.
+              - 🤿 **Infinite Oxygen**: Nafas selam terkunci di 100%.
+              - ⚔️ **Max Sharpness**: Ketajaman senjata melee selalu maksimal.
+              - 🏹 **Infinite Ammo**: Peluru bowgun tidak berkurang.
+              - 🧪 **Status Immunity**: Kebal racun, lumpur, dan salju.
+            - **🎮 Dukungan Penuh Gamepad**: Plug-and-play GameSir Nova Lite / Xbox / Nintendo Switch gamepad.
+            - **🔒 Auto Safe-Guard & Persistence**: Konfigurasi otomatis disimpan dan otomatis nonaktif di server online.
           files: release/*.apk
           prerelease: false
+          make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
