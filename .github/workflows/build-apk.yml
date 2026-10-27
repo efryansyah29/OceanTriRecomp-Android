@@ -25,10 +25,8 @@ jobs:
 
       - name: Download Official v1.5 Base APK
         run: |
-          mkdir -p build/base
+          mkdir -p build
           curl -L -s -o build/v1.5.apk https://github.com/Kiridor123/OceanTriRecomp-Android/releases/download/v1.5/OceanTriRecomp-Android-v1.5-arm64.apk
-          unzip -q build/v1.5.apk -d build/base
-          rm -rf build/base/META-INF
 
       - name: Compile Modified Java Classes
         run: |
@@ -44,26 +42,44 @@ jobs:
           echo "Using d8: $D8_CMD"
           CLASS_FILES=$(find build/classes -name "*.class")
           "$D8_CMD" --min-api 29 --output build/dex $CLASS_FILES
-          
-          cp build/dex/classes.dex build/base/classes.dex
 
-      - name: Repackage and Sign APK
+      - name: Inject Modified Classes into Official APK
+        run: |
+          python3 -c "
+          import zipfile
+
+          with open('build/dex/classes.dex', 'rb') as f:
+              new_dex = f.read()
+
+          with zipfile.ZipFile('build/v1.5.apk', 'r') as zin:
+              with zipfile.ZipFile('build/unaligned.apk', 'w') as zout:
+                  for item in zin.infolist():
+                      if item.filename.startswith('META-INF/'):
+                          continue
+                      if item.filename == 'classes.dex':
+                          info = zipfile.ZipInfo(item.filename)
+                          info.compress_type = zipfile.ZIP_DEFLATED
+                          zout.writestr(info, new_dex)
+                      else:
+                          data = zin.read(item.filename)
+                          info = zipfile.ZipInfo(item.filename)
+                          info.compress_type = item.compress_type
+                          zout.writestr(info, data)
+          "
+
+      - name: Align and Sign APK
         run: |
           ZIPALIGN_CMD=$(find "$ANDROID_HOME/build-tools" -name zipalign | sort -V | tail -n 1)
           APKSIGNER_CMD=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -n 1)
           echo "Using zipalign: $ZIPALIGN_CMD"
           echo "Using apksigner: $APKSIGNER_CMD"
           
-          cd build/base
-          zip -q -r ../unaligned.apk .
-          cd ../..
-          
           "$ZIPALIGN_CMD" -f 4 build/unaligned.apk build/aligned.apk
           
           keytool -genkey -v -keystore build/keystore.jks -alias oceantri -keyalg RSA -keysize 2048 -validity 10000 -storepass oceantri123 -keypass oceantri123 -dname "CN=OceanTri, OU=MH3, O=Recomp, L=LocLac, S=Moga, C=JP"
           
           mkdir -p release
-          "$APKSIGNER_CMD" sign --ks build/keystore.jks --ks-pass pass:oceantri123 --key-pass pass:oceantri123 --out release/OceanTriRecomp-Android-v1.5-cheats.apk build/aligned.apk
+          "$APKSIGNER_CMD" sign --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true --ks build/keystore.jks --ks-pass pass:oceantri123 --key-pass pass:oceantri123 --out release/OceanTriRecomp-Android-v1.5-cheats.apk build/aligned.apk
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
