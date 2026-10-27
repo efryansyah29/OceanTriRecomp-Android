@@ -12,18 +12,19 @@
 - [ ] Lakukan commit dan push ke remote repository `origin main` untuk memicu proses build di cloud GitHub Actions
 
 ## 🔄 Actions Done (Rolling Window 5–7 items)
-- 2026-10-27: Implemented `ApplyCheats()`, `SaveCheats()`, and `LoadCheats()` for zero-crash cheat persistence.
-- 2026-10-27: Patched `runtime/src/cheats.cpp` to evaluate active cheats dynamically per-frame instead of static-once.
 - 2026-10-27: Successfully compiled and published initial release `v1.5.5-cheats` on GitHub Actions.
-- 2026-10-27: Root-caused instant cold-start crash: `super.onCreate()` called after dialog trigger, causing `WindowManager.BadTokenException`.
-- 2026-10-27: Patched `OceanTriActivity.java` lifecycle flow, safe dialog handlers, and deferred ROM verification to `onResume()`.
-- 2026-10-27: Updated GitHub Actions workflow for release tag `v1.5.5-cheats-r2`.
+- 2026-10-27: Root-caused instant cold-start crash on POCO X6 5G (PixelOS / Android 15+).
+- 2026-10-27: Identified compressed `.so` packaging (`jar -uf` instead of `jar -0`) causing failure on Android 15 16KB-page-size dynamic linker.
+- 2026-10-27: Patched `build_apk.sh` with `jar -0 -uf` for uncompressed `.so` so `zipalign -P 16 -f 4` achieves true 16KB page alignment.
+- 2026-10-27: Adjusted `targetSdkVersion` to 34 in `AndroidManifest.xml` to prevent Android 15 sandbox termination.
+- 2026-10-27: Hardened `SDLActivity.java` and `OceanTriActivity.java` with safe async dialogs and JNI library load tracking.
+- 2026-10-27: Triggering GitHub Actions CI/CD pipeline for release `v1.5.5-cheats-r3`.
 
 ## ⚠️ Known Blockers & Edge Cases
 - Tanpa file ROM (`RMHP08`), game tidak memiliki asset grafis/audio untuk dijalankan.
 - ROM wajib Monster Hunter Tri PAL Game ID `RMHP08` (`.rvz` atau `.iso`).
 
 ## 🚀 Next Steps
-1. Push perbaikan cold-start crash ke `origin main` untuk memicu build APK v1.5.5-r2.
-2. Unduh file ROM Monster Hunter Tri PAL `RMHP08.rvz` ke HP di folder `/storage/emulated/0/MH3/`.
-3. Pasang APK baru dan jalankan game.
+1. Push perbaikan 16KB page alignment dan PixelOS fix ke `origin main`.
+2. Monitor jalannya workflow GitHub Actions v1.5.5-cheats-r3.
+3. Unduh APK baru di POCO X6 5G PixelOS dan verifikasi bahwa aplikasi tidak force close.

@@ -78,28 +78,26 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main'
         with:
-          tag_name: v1.5.5-cheats-r2
-          name: "OceanTriRecomp Android v1.5.5-r2 (Cheats Mod & Cold-Start Crash Fix)"
+          tag_name: v1.5.5-cheats-r3
+          name: "OceanTriRecomp Android v1.5.5-r3 (16KB Page Alignment & Android 15/PixelOS Fix)"
           body: |
-            ## OceanTriRecomp Android v1.5.5-r2 (Cheats Mod + Crash Fix) 🦖🎮📱
+            ## OceanTriRecomp Android v1.5.5-r3 (PixelOS / Android 15 Fix) 🦖📱⚡
 
-            Pembaruan kustom Monster Hunter Tri Android ARM64 dengan integrasi menu overlay aktivasi cheat on/off, kompatibilitas Gamepad (GameSir Nova Lite), serta **perbaikan fatal crash saat startup**.
+            Rilis pembaruan khusus untuk menangani kompatibilitas **Android 15+ / PixelOS (Snapdragon 7s Gen 2 / POCO X6 5G)** dan arsitektur 16KB Page Alignment:
 
-            ### 🐛 Perbaikan Fatal Crash pada Rilis Ini:
-            - **Fixed Cold-Start WindowManager BadTokenException**: Memperbaiki urutan `super.onCreate()` dan menunda pemanggilan dialog seleksi ROM ke `onResume()` sehingga aplikasi tidak force close seketika saat baru dibuka ketika file ROM belum ada.
-            - **Safe Dialog Handlers**: Mencegah crash jika dialog muncul saat aplikasi belum terpasang ke window manager.
-            - **Bilingual Prompts**: Dialog informasi pemilihan ROM kini lebih jelas.
+            ### 🚀 Perbaikan Utama pada Rilis Ini:
+            1. **16KB Page Alignment Native Libraries (`jar -0`)**:
+               - Pustaka native (`libmain.so`, `libSDL3.so`, `libpng16.so`) kini dikemas ke APK secara **uncompressed (`compress_type=0`)**.
+               - Ini memungkinkan `zipalign -P 16 -f 4` menyelaraskan offset biner tepat pada kelipatan 16.384 byte (16KB), memenuhi standar ketat dynamic linker Android 15/PixelOS.
+            2. **Target SDK Safe Alignment (`targetSdkVersion="34"`)**:
+               - Menyelaraskan target SDK ke Android 14 guna menghindari sandbox sandbox trap agresif pada Android 15 kustom ROM.
+            3. **Safe Dialog & Crash Protection**:
+               - Dialog kesalahan SDL kini aman dari `WindowManager.BadTokenException`.
+               - Logging status pemuatan library `.so` secara real-time.
 
-            ### ✨ Fitur Cheat & Controller:
-            - **Tab Cheats di Menu Pengaturan (⚙ Settings ➔ Cheats)**:
-              - 🛡️ **God Mode / No Damage**: Kebal dari semua serangan monster, lava, dan racun.
-              - ⚡ **Infinite Stamina**: Lari dan roll tanpa batas.
-              - 🤿 **Infinite Oxygen**: Nafas selam terkunci di 100%.
-              - ⚔️ **Max Sharpness**: Ketajaman senjata melee selalu maksimal.
-              - 🏹 **Infinite Ammo**: Peluru bowgun tidak berkurang.
-              - 🧪 **Status Immunity**: Kebal racun, lumpur, dan salju.
-            - **🎮 Dukungan Penuh Gamepad**: Plug-and-play GameSir Nova Lite / Xbox / Nintendo Switch gamepad.
-            - **🔒 Auto Safe-Guard & Persistence**: Konfigurasi otomatis disimpan dan otomatis nonaktif di server online.
+            ### 🎮 Fitur Mod & Cheats:
+            - **Tab Cheats di Menu Pengaturan (⚙ Settings ➔ Cheats)**: God Mode, Infinite Stamina, Infinite Oxygen, Max Sharpness, Infinite Ammo, Status Immunity.
+            - **Dukungan Penuh Gamepad**: GameSir Nova Lite / Xbox / Switch layout.
           files: release/*.apk
           prerelease: false
           make_latest: true

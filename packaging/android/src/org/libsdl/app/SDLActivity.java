@@ -393,24 +393,34 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
 
         if (mBrokenLibraries) {
             mSingleton = this;
-            AlertDialog.Builder dlgAlert  = new AlertDialog.Builder(this);
-            dlgAlert.setMessage("An error occurred while trying to start the application. Please try again and/or reinstall."
-                  + System.getProperty("line.separator")
-                  + System.getProperty("line.separator")
-                  + "Error: " + errorMsgBrokenLib);
-            dlgAlert.setTitle("SDL Error");
-            dlgAlert.setPositiveButton("Exit",
-                new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog,int id) {
-                        // if this button is clicked, close current activity
-                        SDLActivity.mSingleton.finish();
+            Log.e(TAG, "FATAL: Failed to load native libraries: " + errorMsgBrokenLib);
+            final String finalErrorMsg = errorMsgBrokenLib;
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        if (!isFinishing()) {
+                            AlertDialog.Builder dlgAlert = new AlertDialog.Builder(SDLActivity.this);
+                            dlgAlert.setMessage("Gagal memuat pustaka sistem native (Failed to load native libraries):\n\n"
+                                  + "Error: " + finalErrorMsg);
+                            dlgAlert.setTitle("SDL Library Error");
+                            dlgAlert.setPositiveButton("Exit",
+                                new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialog, int id) {
+                                        SDLActivity.mSingleton.finish();
+                                    }
+                                });
+                            dlgAlert.setCancelable(false);
+                            dlgAlert.show();
+                        }
+                    } catch (Throwable t) {
+                        Log.e(TAG, "Error displaying broken library alert: " + t.getMessage());
                     }
-                });
-           dlgAlert.setCancelable(false);
-           dlgAlert.create().show();
+                }
+            });
 
-           return;
+            return;
         }
 
 

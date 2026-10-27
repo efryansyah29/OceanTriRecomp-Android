@@ -84,6 +84,20 @@ public class OceanTriActivity extends SDLActivity {
     }
 
     @Override
+    public void loadLibraries() {
+        for (String lib : getLibraries()) {
+            try {
+                log("Loading native library: " + lib);
+                org.libsdl.app.SDL.loadLibrary(lib, this);
+                log("Successfully loaded native library: " + lib);
+            } catch (Throwable t) {
+                log("FATAL ERROR loading library " + lib + ": " + t.getMessage());
+                throw t;
+            }
+        }
+    }
+
+    @Override
     protected String getMainFunction() {
         return "SDL_main";
     }
