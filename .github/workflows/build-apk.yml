@@ -23,9 +23,6 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: Download Official v1.5 Base APK
         run: |
           mkdir -p build/base
@@ -54,6 +51,8 @@ jobs:
         run: |
           ZIPALIGN_CMD=$(find "$ANDROID_HOME/build-tools" -name zipalign | sort -V | tail -n 1)
           APKSIGNER_CMD=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -n 1)
+          echo "Using zipalign: $ZIPALIGN_CMD"
+          echo "Using apksigner: $APKSIGNER_CMD"
           
           cd build/base
           zip -q -r ../unaligned.apk .
