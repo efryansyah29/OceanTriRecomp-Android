@@ -43,6 +43,14 @@ public class OceanTriActivity extends SDLActivity {
     private volatile boolean mRomReady = false;
     private boolean mRomCheckStarted = false;
 
+    // Cheats configuration state
+    private static boolean sCheatGodMode = true;
+    private static boolean sCheatInfStamina = true;
+    private static boolean sCheatInfAir = true;
+    private static boolean sCheatInfItems = true;
+    private static boolean sCheatInfMoney = false;
+    private static boolean sCheatInfAmmo = true;
+
     public static synchronized void log(String msg) {
         String timestamp = new SimpleDateFormat("HH:mm:ss.SSS", Locale.US).format(new Date());
         String line = "[" + timestamp + "] " + msg;
@@ -97,11 +105,46 @@ public class OceanTriActivity extends SDLActivity {
 
     @Override
     protected String[] getArguments() {
+        List<String> args = new ArrayList<>();
         if (sRomPath != null && !sRomPath.isEmpty()) {
             log("Passing --rom argument to native main(): " + sRomPath);
-            return new String[] { "--rom", sRomPath };
+            args.add("--rom");
+            args.add(sRomPath);
         }
-        return new String[0];
+
+        loadCheatsConfig();
+
+        if (sCheatGodMode) {
+            log("Cheats: activating God Mode (--no-damage)");
+            args.add("--no-damage");
+        }
+        if (sCheatInfStamina) {
+            log("Cheats: activating Infinite stamina");
+            args.add("--cheat");
+            args.add("Infinite stamina");
+        }
+        if (sCheatInfAir) {
+            log("Cheats: activating Infinite air (oxygen)");
+            args.add("--cheat");
+            args.add("Inf air");
+        }
+        if (sCheatInfItems) {
+            log("Cheats: activating Infinite items");
+            args.add("--cheat");
+            args.add("Infinite items");
+        }
+        if (sCheatInfMoney) {
+            log("Cheats: activating Infinite money");
+            args.add("--cheat");
+            args.add("Infinite money");
+        }
+        if (sCheatInfAmmo) {
+            log("Cheats: activating Infinite ammo");
+            args.add("--cheat");
+            args.add("Inf ammo");
+        }
+
+        return args.toArray(new String[0]);
     }
 
     public static final int COMMAND_RESTART = 0x8001;
@@ -241,9 +284,8 @@ public class OceanTriActivity extends SDLActivity {
 
         File existingMh3Rom = findRomInDir(mh3Dir);
         if (existingMh3Rom != null) {
-            sRomPath = existingMh3Rom.getAbsolutePath();
-            mRomReady = true;
-            log("ROM already present in target directory /storage/emulated/0/MH3: " + sRomPath);
+            log("ROM already present in target directory /storage/emulated/0/MH3: " + existingMh3Rom.getAbsolutePath());
+            onRomFoundAndPrepareCheats(existingMh3Rom.getAbsolutePath());
             return;
         }
 
@@ -252,9 +294,13 @@ public class OceanTriActivity extends SDLActivity {
         // 2. Search for ROM in other common directories (e.g. Download)
         final String foundOtherRom = findGameRom();
         if (foundOtherRom != null) {
-            sRomPath = foundOtherRom;
-            mRomReady = true;
-            log("Found ROM automatically, launching: " + sRomPath);
+            log("Found ROM automatically in other dir: " + foundOtherRom);
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    showRomFoundPrompt(foundOtherRom);
+                }
+            });
             return;
         }
 
@@ -264,6 +310,138 @@ public class OceanTriActivity extends SDLActivity {
                 showRomSelectPrompt();
             }
         });
+    }
+
+    private void onRomFoundAndPrepareCheats(final String romPath) {
+        sRomPath = romPath;
+        loadCheatsConfig();
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                showCheatsSelectionDialog();
+            }
+        });
+    }
+
+    private void showCheatsSelectionDialog() {
+        if (isFinishing() || (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1 && isDestroyed())) {
+            mRomReady = true;
+            return;
+        }
+        final String[] items = new String[] {
+            "🛡️ God Mode (Hunter kebal / No Damage)",
+            "⚡ Infinite Stamina (Stamina tak habis)",
+            "🫧 Infinite Air (Nafas menyelam tak habis)",
+            "🎒 Infinite Items (Potion, Ration, Trap awet)",
+            "💰 Infinite Zenny (Uang 9.999.999z)",
+            "🏹 Infinite Ammo (Peluru Bowgun tak terbatas)"
+        };
+        final boolean[] checked = new boolean[] {
+            sCheatGodMode,
+            sCheatInfStamina,
+            sCheatInfAir,
+            sCheatInfItems,
+            sCheatInfMoney,
+            sCheatInfAmmo
+        };
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("🎮 Monster Hunter Tri - Cheats");
+        builder.setMultiChoiceItems(items, checked, new DialogInterface.OnMultiChoiceClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which, boolean isChecked) {
+                checked[which] = isChecked;
+            }
+        });
+        builder.setPositiveButton("MULAI MAIN (START)", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                sCheatGodMode = checked[0];
+                sCheatInfStamina = checked[1];
+                sCheatInfAir = checked[2];
+                sCheatInfItems = checked[3];
+                sCheatInfMoney = checked[4];
+                sCheatInfAmmo = checked[5];
+                saveCheatsToFile();
+                mRomReady = true;
+                log("Cheats confirmed. Starting native engine!");
+            }
+        });
+        builder.setNegativeButton("MAIN TANPA CHEAT", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                sCheatGodMode = false;
+                sCheatInfStamina = false;
+                sCheatInfAir = false;
+                sCheatInfItems = false;
+                sCheatInfMoney = false;
+                sCheatInfAmmo = false;
+                saveCheatsToFile();
+                mRomReady = true;
+                log("Playing without cheats. Starting native engine!");
+            }
+        });
+        builder.setCancelable(false);
+        try {
+            builder.show();
+        } catch (Exception e) {
+            log("Error showing cheats dialog: " + e.getMessage());
+            mRomReady = true;
+        }
+    }
+
+    private void loadCheatsConfig() {
+        File mh3Dir = new File("/storage/emulated/0/MH3");
+        if (!mh3Dir.exists()) {
+            mh3Dir.mkdirs();
+        }
+        File cheatsFile = new File(mh3Dir, "cheats.txt");
+        if (!cheatsFile.exists()) {
+            saveCheatsToFile();
+            return;
+        }
+
+        try (java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.FileReader(cheatsFile))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                if (line.startsWith("#") || !line.contains("=")) continue;
+                String[] parts = line.split("=", 2);
+                String key = parts[0].trim().toLowerCase(Locale.ROOT);
+                boolean val = Boolean.parseBoolean(parts[1].trim());
+                if (key.contains("god")) sCheatGodMode = val;
+                else if (key.contains("stamina")) sCheatInfStamina = val;
+                else if (key.contains("air") || key.contains("oxygen")) sCheatInfAir = val;
+                else if (key.contains("item")) sCheatInfItems = val;
+                else if (key.contains("money") || key.contains("zenny")) sCheatInfMoney = val;
+                else if (key.contains("ammo")) sCheatInfAmmo = val;
+            }
+        } catch (Exception e) {
+            log("Error reading cheats.txt: " + e.getMessage());
+        }
+    }
+
+    private void saveCheatsToFile() {
+        try {
+            File mh3Dir = new File("/storage/emulated/0/MH3");
+            if (!mh3Dir.exists()) {
+                mh3Dir.mkdirs();
+            }
+            File cheatsFile = new File(mh3Dir, "cheats.txt");
+            FileWriter fw = new FileWriter(cheatsFile);
+            fw.write("# Monster Hunter Tri - Cheats Configuration\n");
+            fw.write("# Set true or false:\n");
+            fw.write("god_mode=" + sCheatGodMode + "\n");
+            fw.write("inf_stamina=" + sCheatInfStamina + "\n");
+            fw.write("inf_air=" + sCheatInfAir + "\n");
+            fw.write("inf_items=" + sCheatInfItems + "\n");
+            fw.write("inf_money=" + sCheatInfMoney + "\n");
+            fw.write("inf_ammo=" + sCheatInfAmmo + "\n");
+            fw.close();
+            log("Saved cheats to " + cheatsFile.getAbsolutePath());
+        } catch (Exception e) {
+            log("Error saving cheats.txt: " + e.getMessage());
+        }
     }
 
     private void showRomFoundPrompt(final String detectedPath) {
@@ -292,9 +470,7 @@ public class OceanTriActivity extends SDLActivity {
         builder.setNegativeButton("Gunakan Langsung", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                sRomPath = detectedPath;
-                mRomReady = true;
-                log("Using ROM directly without copying: " + sRomPath);
+                onRomFoundAndPrepareCheats(detectedPath);
             }
         });
         builder.setCancelable(false);
@@ -397,8 +573,7 @@ public class OceanTriActivity extends SDLActivity {
 
         if (targetFile.exists() && fileSize > 0 && targetFile.length() == fileSize) {
             log("Target file already exists with same size: " + targetFile.getAbsolutePath());
-            sRomPath = targetFile.getAbsolutePath();
-            mRomReady = true;
+            onRomFoundAndPrepareCheats(targetFile.getAbsolutePath());
             return;
         }
 
@@ -451,8 +626,7 @@ public class OceanTriActivity extends SDLActivity {
                         @Override
                         public void run() {
                             progressDialog.dismiss();
-                            sRomPath = targetFile.getAbsolutePath();
-                            mRomReady = true;
+                            onRomFoundAndPrepareCheats(targetFile.getAbsolutePath());
                         }
                     });
                 } catch (final Exception e) {
@@ -490,8 +664,7 @@ public class OceanTriActivity extends SDLActivity {
 
     private void copyFileWithProgress(final File sourceFile, final File targetFile) {
         if (sourceFile.getAbsolutePath().equals(targetFile.getAbsolutePath())) {
-            sRomPath = targetFile.getAbsolutePath();
-            mRomReady = true;
+            onRomFoundAndPrepareCheats(targetFile.getAbsolutePath());
             return;
         }
 
@@ -540,8 +713,7 @@ public class OceanTriActivity extends SDLActivity {
                         @Override
                         public void run() {
                             progressDialog.dismiss();
-                            sRomPath = targetFile.getAbsolutePath();
-                            mRomReady = true;
+                            onRomFoundAndPrepareCheats(targetFile.getAbsolutePath());
                         }
                     });
                 } catch (final Exception e) {

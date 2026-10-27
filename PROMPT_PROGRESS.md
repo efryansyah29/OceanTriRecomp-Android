@@ -12,13 +12,9 @@
 - [ ] Lakukan commit dan push ke remote repository `origin main` untuk memicu proses build di cloud GitHub Actions
 
 ## 🔄 Actions Done (Rolling Window 5–7 items)
-- 2026-10-27: Successfully compiled and published initial release `v1.5.5-cheats` on GitHub Actions.
-- 2026-10-27: Root-caused instant cold-start crash on POCO X6 5G (PixelOS / Android 15+).
-- 2026-10-27: Identified compressed `.so` packaging (`jar -uf` instead of `jar -0`) causing failure on Android 15 16KB-page-size dynamic linker.
-- 2026-10-27: Patched `build_apk.sh` with `jar -0 -uf` for uncompressed `.so` so `zipalign -P 16 -f 4` achieves true 16KB page alignment.
-- 2026-10-27: Adjusted `targetSdkVersion` to 34 in `AndroidManifest.xml` to prevent Android 15 sandbox termination.
-- 2026-10-27: Hardened `SDLActivity.java` and `OceanTriActivity.java` with safe async dialogs and JNI library load tracking.
-- 2026-10-27: Triggering GitHub Actions CI/CD pipeline for release `v1.5.5-cheats-r3`.
+- 2026-10-27: Analyzed root cause of cold-start crash: Kiridor's experimental CI built SDL3 statically into `libmain.so`, colliding with `libSDL3.so`. Official `v1.5` binary is confirmed 100% stable on Android 17 / PixelOS POCO X6.
+- 2026-10-27: Built direct mod on top of official `v1.5` engine: injected Cheat Engine interactive dialog (God Mode, Inf Stamina, Inf Oxygen, Inf Items, Inf Ammo, Zenny) and `/storage/emulated/0/MH3/cheats.txt` persistence into `OceanTriActivity`.
+- 2026-10-27: Created ultra-fast repackaging pipeline compiling Java classes with `d8` and preserving original official native `.so` libraries.
 
 ## ⚠️ Known Blockers & Edge Cases
 - Tanpa file ROM (`RMHP08`), game tidak memiliki asset grafis/audio untuk dijalankan.

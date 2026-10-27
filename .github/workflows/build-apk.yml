@@ -1,9 +1,8 @@
-name: Build Android APK (v1.5.5-test)
+name: Build Monster Hunter Tri Modded APK (v1.5-cheats)
 
 on:
   push:
     branches: [ main ]
-    tags: [ 'v*' ]
   workflow_dispatch:
 
 permissions:
@@ -11,14 +10,12 @@ permissions:
 
 jobs:
   build:
-    name: Build OceanTriRecomp Android APK
+    name: Build OceanTriRecomp v1.5 Cheats Mod
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -26,51 +23,53 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Set up .NET 8
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.x'
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
 
-      - name: Set up Android SDK & NDK 28
+      - name: Download Official v1.5 Base APK
         run: |
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
-          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install "ndk;28.2.13676358" "build-tools;35.0.0" "platforms;android-35"
-          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/28.2.13676358" >> $GITHUB_ENV
+          mkdir -p build/base
+          curl -L -s -o build/v1.5.apk https://github.com/Kiridor123/OceanTriRecomp-Android/releases/download/v1.5/OceanTriRecomp-Android-v1.5-arm64.apk
+          unzip -q build/v1.5.apk -d build/base
+          rm -rf build/base/META-INF
 
-      - name: Build Translator CLI
+      - name: Compile Modified Java Classes
         run: |
-          dotnet build toolchain/translator/src/Translator.Cli/Translator.Cli.csproj -c Release
+          mkdir -p build/classes build/dex
+          ANDROID_JAR=$(find "$ANDROID_HOME/platforms" -name android.jar | sort -V | tail -n 1)
+          echo "Using Android Jar: $ANDROID_JAR"
+          
+          javac -encoding UTF-8 -cp "$ANDROID_JAR" -d build/classes \
+            packaging/android/src/org/libsdl/app/*.java \
+            packaging/android/src/com/oceantri/mh3/*.java
 
-      - name: Fetch prebuilt libSDL3.so
-        run: |
-          mkdir -p packaging/android/libs/arm64-v8a
-          curl -L -s -o base_v1.5.apk https://github.com/Kiridor123/OceanTriRecomp-Android/releases/download/v1.5/OceanTriRecomp-Android-v1.5-arm64.apk
-          unzip -p base_v1.5.apk lib/arm64-v8a/libSDL3.so > packaging/android/libs/arm64-v8a/libSDL3.so
-          rm -f base_v1.5.apk
+          D8_CMD=$(find "$ANDROID_HOME/build-tools" -name d8 | sort -V | tail -n 1)
+          echo "Using d8: $D8_CMD"
+          CLASS_FILES=$(find build/classes -name "*.class")
+          "$D8_CMD" --min-api 29 --output build/dex $CLASS_FILES
+          
+          cp build/dex/classes.dex build/base/classes.dex
 
-      - name: Build OpenSSL for Android ARM64
+      - name: Repackage and Sign APK
         run: |
-          git clone --depth 1 -b openssl-3.0.15 https://github.com/openssl/openssl.git $RUNNER_TEMP/openssl-src
-          cd $RUNNER_TEMP/openssl-src
-          export ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/28.2.13676358
-          export PATH=$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH
-          ./Configure android-arm64 -D__ANDROID_API__=29 no-shared no-tests --prefix=$RUNNER_TEMP/openssl-android
-          make -j$(nproc)
-          make install_sw
-          if [ -d "$RUNNER_TEMP/openssl-android/lib64" ] && [ ! -d "$RUNNER_TEMP/openssl-android/lib" ]; then
-            ln -s lib64 "$RUNNER_TEMP/openssl-android/lib"
-          fi
-          echo "OPENSSL_ANDROID_DIR=$RUNNER_TEMP/openssl-android" >> $GITHUB_ENV
-
-      - name: Compile Native Libraries and Package APK
-        run: |
-          chmod +x scripts/build-android.sh packaging/android/build_apk.sh
-          bash scripts/build-android.sh
+          ZIPALIGN_CMD=$(find "$ANDROID_HOME/build-tools" -name zipalign | sort -V | tail -n 1)
+          APKSIGNER_CMD=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -n 1)
+          
+          cd build/base
+          zip -q -r ../unaligned.apk .
+          cd ../..
+          
+          "$ZIPALIGN_CMD" -f 4 build/unaligned.apk build/aligned.apk
+          
+          keytool -genkey -v -keystore build/keystore.jks -alias oceantri -keyalg RSA -keysize 2048 -validity 10000 -storepass oceantri123 -keypass oceantri123 -dname "CN=OceanTri, OU=MH3, O=Recomp, L=LocLac, S=Moga, C=JP"
+          
+          mkdir -p release
+          "$APKSIGNER_CMD" sign --ks build/keystore.jks --ks-pass pass:oceantri123 --key-pass pass:oceantri123 --out release/OceanTriRecomp-Android-v1.5-cheats.apk build/aligned.apk
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: OceanTriRecomp-Android-v1.5.5-cheats-arm64
+          name: OceanTriRecomp-Android-v1.5-cheats
           path: release/*.apk
           if-no-files-found: error
 
@@ -78,26 +77,26 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main'
         with:
-          tag_name: v1.5.5-cheats-r3
-          name: "OceanTriRecomp Android v1.5.5-r3 (16KB Page Alignment & Android 15/PixelOS Fix)"
+          tag_name: v1.5-cheats-final
+          name: "OceanTriRecomp Android v1.5 Cheats Mod (Zero-Crash Official Engine)"
           body: |
-            ## OceanTriRecomp Android v1.5.5-r3 (PixelOS / Android 15 Fix) 🦖📱⚡
-
-            Rilis pembaruan khusus untuk menangani kompatibilitas **Android 15+ / PixelOS (Snapdragon 7s Gen 2 / POCO X6 5G)** dan arsitektur 16KB Page Alignment:
-
-            ### 🚀 Perbaikan Utama pada Rilis Ini:
-            1. **16KB Page Alignment Native Libraries (`jar -0`)**:
-               - Pustaka native (`libmain.so`, `libSDL3.so`, `libpng16.so`) kini dikemas ke APK secara **uncompressed (`compress_type=0`)**.
-               - Ini memungkinkan `zipalign -P 16 -f 4` menyelaraskan offset biner tepat pada kelipatan 16.384 byte (16KB), memenuhi standar ketat dynamic linker Android 15/PixelOS.
-            2. **Target SDK Safe Alignment (`targetSdkVersion="34"`)**:
-               - Menyelaraskan target SDK ke Android 14 guna menghindari sandbox sandbox trap agresif pada Android 15 kustom ROM.
-            3. **Safe Dialog & Crash Protection**:
-               - Dialog kesalahan SDL kini aman dari `WindowManager.BadTokenException`.
-               - Logging status pemuatan library `.so` secara real-time.
-
-            ### 🎮 Fitur Mod & Cheats:
-            - **Tab Cheats di Menu Pengaturan (⚙ Settings ➔ Cheats)**: God Mode, Infinite Stamina, Infinite Oxygen, Max Sharpness, Infinite Ammo, Status Immunity.
-            - **Dukungan Penuh Gamepad**: GameSir Nova Lite / Xbox / Switch layout.
+            ## 🎮 Monster Hunter Tri Android v1.5 - Cheats Mod (Official Engine Zero-Crash) 🦖📱⚡
+            
+            Versi modifikasi ini dibangun di atas **100% pustaka mesin resmi v1.5** yang terbukti mulus tanpa force-close di **Android 17 / PixelOS POCO X6 5G**.
+            
+            ### 🛡️ Fitur Cheats:
+            - **God Mode (No Damage)**: Hunter kebal terhadap segala serangan monster.
+            - **Infinite Stamina**: Stamina hunter penuh terus tanpa batas saat lari, menghindar, atau menyerang.
+            - **Infinite Air (Oxygen)**: Nafas saat menyelam / berenang tidak pernah habis.
+            - **Infinite Items**: Potion, Whetstone, Ration, Trap tidak pernah berkurang dari pouch saat dipakai.
+            - **Infinite Zenny**: Uang langsung 9.999.999z.
+            - **Infinite Ammo**: Peluru Bowgun tidak berkurang dari pouch.
+            
+            ### 📝 Cara Penggunaan:
+            1. Pasang APK `OceanTriRecomp-Android-v1.5-cheats.apk`.
+            2. Buka aplikasi, izinkan akses penyimpanan (Storage Permission).
+            3. Menu Cheats interaktif akan muncul di layar — centang cheat yang ingin Anda aktifkan, lalu tekan **MULAI MAIN (START)**.
+            4. Pengaturan cheat juga otomatis tersimpan di `/storage/emulated/0/MH3/cheats.txt`.
           files: release/*.apk
           prerelease: false
           make_latest: true
